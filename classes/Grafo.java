@@ -10,7 +10,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.PriorityQueue;
 
 import guru.nidi.graphviz.attribute.Color;
 import guru.nidi.graphviz.attribute.Label;
@@ -19,7 +18,6 @@ import guru.nidi.graphviz.engine.Format;
 import guru.nidi.graphviz.engine.Graphviz;
 import guru.nidi.graphviz.model.Link;
 import guru.nidi.graphviz.model.MutableGraph;
-import teste.Node;
 
 
 
@@ -27,7 +25,10 @@ enum Cor {BRANCO,CINZA,PRETO};//enumerado para as cores dos algoritmos DFS e BFS
 
 //Classe que representa um grafo.
 public class Grafo <T extends Comparable<T>>{
-	private HashMap<T,List<Adjacencia<T>>> vertices;
+	private HashMap<T,List<Adjacencia<T>>> verticesOld;
+	
+	private HashMap<T, Node<T>> vertices;
+	
 	private Integer nroVertices;
 	private boolean orientado;
 	private Integer timestamp = 0;
@@ -48,11 +49,16 @@ public class Grafo <T extends Comparable<T>>{
 	private Grafo(Integer nroVertices, boolean orientado) {
 		this.nroVertices = nroVertices;
 		this.orientado = orientado;
-		this.vertices = new HashMap<T,List<Adjacencia<T>>>();
+		this.verticesOld = new HashMap<T,List<Adjacencia<T>>>();
+		this.vertices = new HashMap<T,Node<T>>();
 	}
 
 	public Grafo() {
 		this(0,false);
+	}
+	
+	public Grafo(boolean orientado) {
+		this(0,true);
 	}
 
 
@@ -78,26 +84,51 @@ public class Grafo <T extends Comparable<T>>{
 		if(a == null) {//cancela se a == null
 			return;
 		}
-		if(vertices.containsKey(a.getV())) {
-			vertices.get(a.getV()).add(new Adjacencia<T>(a.getW(),a.getPeso()));
+		if(verticesOld.containsKey(a.getV())) {
+			verticesOld.get(a.getV()).add(new Adjacencia<T>(a.getW(),a.getPeso()));
 		}else {
 			List<Adjacencia<T>> aux = new LinkedList<Adjacencia<T>>();
 			aux.add(new Adjacencia<T>(a.getW(),a.getPeso()));
-			vertices.put(a.getV(),aux);
+			verticesOld.put(a.getV(),aux);
 			this.nroVertices++;
 		}
-		Collections.sort(vertices.get(a.getV()));
+		Collections.sort(verticesOld.get(a.getV()));
 
-		if(!vertices.containsKey(a.getW())) {//se n tem na lista do vertice, precisa criar ele
+		if(!verticesOld.containsKey(a.getW())) {//se n tem na lista do vertice, precisa criar ele
 			List<Adjacencia<T>> aux = new LinkedList<Adjacencia<T>>();
 			//			aux.add(new Adjacencia<T>(a.getV(),a.getPeso()));
-			vertices.put(a.getW(),aux);
+			verticesOld.put(a.getW(),aux);
 			this.nroVertices++;
 		}
 
 		if(!orientado) {
-			vertices.get(a.getW()).add(new Adjacencia<T>(a.getV(),a.getPeso()));
-			Collections.sort(vertices.get(a.getW()));
+			verticesOld.get(a.getW()).add(new Adjacencia<T>(a.getV(),a.getPeso()));
+			Collections.sort(verticesOld.get(a.getW()));
+		}
+
+	}
+	
+	public Node<T> getNode(T key){
+		return this.vertices.get(key);
+	}
+	
+	public void inserir (Node<T> origem,Node<T> destino, int weight ) {
+
+		if(vertices.containsKey(origem.getId())) {//se origem já existe no grafo, simplesmente adicione a aresta ao nó.
+			vertices.get(origem.getId()).addBranch(weight, destino);
+		}else {//senão adicione a aresta ao nó e adicione o nó ao grafo!
+			origem.addBranch(weight, destino);//adiciona a aresta ao nó origem.
+			vertices.put(origem.getId(), origem);//adiciona o nó ao hashMap do grafo.
+			//this.nroVertices++;
+		}
+
+		if(!vertices.containsKey(destino.getId())) {//se destino n está na lista dos vertices, precisa adicioná-lo
+			vertices.put(destino.getId(),destino);
+			//this.nroVertices++;
+		}
+
+		if(!orientado) {//se não é orientado, precisa adicionar aresta do destino à origem também.
+			vertices.get(destino.getId()).addBranch(weight, origem);
 		}
 
 	}
@@ -121,7 +152,7 @@ public class Grafo <T extends Comparable<T>>{
 			if(c.get(adj.getV()) == Cor.BRANCO) {//c[adj.getV()] 
 				pi.replace(adj.getV(), indice);
 				//pi[adj.getV()] = indice;
-				DFS_visit(vertices.get(adj.getV()), adj.getV(), verticesVisitados);
+				DFS_visit(verticesOld.get(adj.getV()), adj.getV(), verticesVisitados);
 			}
 		}
 		//c[indice] = Cor.PRETO;
@@ -143,7 +174,7 @@ public class Grafo <T extends Comparable<T>>{
 		f = new HashMap<T,Integer>();
 
 
-		this.vertices.forEach((key, value) -> {
+		this.verticesOld.forEach((key, value) -> {
 			c.put(key, Cor.BRANCO);
 			pi.put(key, null);
 			d.put(key, 0);
@@ -152,7 +183,7 @@ public class Grafo <T extends Comparable<T>>{
 
 		timestamp = 0;
 
-		DFS_visit(vertices.get(origem), origem,verticesVisitados);
+		DFS_visit(verticesOld.get(origem), origem,verticesVisitados);
 		return verticesVisitados;
 	}
 
@@ -186,7 +217,7 @@ public class Grafo <T extends Comparable<T>>{
 			if(c.get(adj.getV()) == Cor.BRANCO) {//c[adj.getV()] 
 				pi.replace(adj.getV(), atual);
 				//pi[adj.getV()] = indice;
-				if(DFS_visit(vertices.get(adj.getV()), adj.getV(),destino, verticesVisitados)) {
+				if(DFS_visit(verticesOld.get(adj.getV()), adj.getV(),destino, verticesVisitados)) {
 
 					verticesVisitados.add(0,atual);//adiciona o vértice atual e retorna true.
 					c.replace(atual, Cor.PRETO);
@@ -215,7 +246,7 @@ public class Grafo <T extends Comparable<T>>{
 		f = new HashMap<T,Integer>();
 
 
-		this.vertices.forEach((key, value) -> {
+		this.verticesOld.forEach((key, value) -> {
 			c.put(key, Cor.BRANCO);
 			pi.put(key, null);
 			d.put(key, 0);
@@ -225,78 +256,11 @@ public class Grafo <T extends Comparable<T>>{
 
 		timestamp = 0;
 
-		DFS_visit(vertices.get(origem), origem, destino,verticesVisitados);
+		DFS_visit(verticesOld.get(origem), origem, destino,verticesVisitados);
 		return verticesVisitados;
 	}
 
-	private T findNextVertex(T atual, List<Aresta<T>> heuristicas) {
-		List<Adjacencia<T>> arestas = this.vertices.get(atual);
-		Aresta<T> menor = null;
-		Integer valorMenor = null;
-		for (Aresta<T> aresta : heuristicas) {
-			if(aresta.getV().equals(atual)) {
-				menor = aresta;
-				for (Adjacencia<T> adjacencia : arestas) {
-					if(adjacencia.getV().equals(aresta.getW())) {
-						valorMenor = aresta.getPeso() + adjacencia.getPeso();
-						break;
-					}
-				}
-				break;
-			}
-		}
-		if(menor != null) {
-			for (Aresta<T> aresta : heuristicas) {
-				for (Adjacencia<T> adjacencia : arestas) {
-					if(adjacencia.getV().equals(aresta.getW())) {
-						Integer valor = aresta.getPeso() + adjacencia.getPeso();
-						if(valor.compareTo(valorMenor) < 0) {
-							menor = aresta;
-							valorMenor = valor;
-						}
-					}
-				}
-				
-			}
-		}
-
-		return menor != null ? menor.getW() : null; 
-
-	}
-
-	private boolean aEstrela_visit(List<Adjacencia<T>> v, T atual, T destino, List<T> verticesVisitados, List<Aresta<T>> heuristicas) {
-		System.out.println("Visitando " + atual);
-		
-		
-
-		if(atual.equals(destino)) {
-			verticesVisitados.add(0,atual);
-			System.out.println("Chegou ao destino " + destino);
-			return true;
-		}
-
-		//for (Adjacencia<T> adj : v) {
-			//if(c.get(adj.getV()) == Cor.BRANCO) {//c[adj.getV()] 
-				T proximo = findNextVertex(atual,heuristicas);
-				if(aEstrela_visit(this.vertices.get(proximo),proximo,destino,verticesVisitados,heuristicas)) {
-					return true;
-				}
-			//}
-		//}
-		return false;
-	}
-
-
-	public List<T> AEstrela(T origem, T destino, List<Aresta<T>> heuristicas){
-		PriorityQueue<Node> closedList = new PriorityQueue<>();
-	    PriorityQueue<Node> openList = new PriorityQueue<>();
-	    
-	    
-	    
-		List<T> verticesVisitados = new ArrayList<T>();
-		aEstrela_visit(vertices.get(origem), origem, destino,verticesVisitados, heuristicas);
-		return verticesVisitados;
-	}
+	
 
 	//	//Busca em Largura
 	//	//pré-requisitos: origem >= 0
@@ -372,7 +336,7 @@ public class Grafo <T extends Comparable<T>>{
 	//	//Pós-condições: retorna a Aresta.
 	public Aresta<T> getAresta(T u, T v) {
 
-		List<Adjacencia<T>> l = vertices.get(u);
+		List<Adjacencia<T>> l = verticesOld.get(u);
 		for (Adjacencia<T> adjacencia : l) {
 			if(adjacencia.getV() == v) {
 				return new Aresta<T>(u,v,adjacencia.getPeso());
@@ -410,38 +374,23 @@ public class Grafo <T extends Comparable<T>>{
 	//	//Pós-condições: Lista de arestas pertencentes ao grafo.
 	public List<Aresta<T>> getArestas(){
 		List<Aresta<T>> l = new LinkedList<Aresta<T>>();
-		List<Adjacencia<T>> aux = null;
 		if(isOrientado()) {
 
-			this.vertices.forEach((key, value) -> {					
-				for (Adjacencia<T> adjacencia : this.vertices.get(key)) {
+			this.verticesOld.forEach((key, value) -> {					
+				for (Adjacencia<T> adjacencia : this.verticesOld.get(key)) {
 					l.add(new Aresta<T>(key,adjacencia.getV(),adjacencia.getPeso()));
 				}
 			});
 
-			//				for(int i = 0; i < nroVertices; i++) {
-			//					aux = vertices[i];
-			//					for (Adjacencia adjacencia : aux) {
-			//						l.add(new Aresta(i,adjacencia.getV(),adjacencia.getPeso()));
-			//					}
-			//				}
 		}else {
 
-			this.vertices.forEach((key, value) -> {
-				for (Adjacencia<T> adjacencia : this.vertices.get(key)) {
+			this.verticesOld.forEach((key, value) -> {
+				for (Adjacencia<T> adjacencia : this.verticesOld.get(key)) {
 					if(adjacencia.getV().compareTo(key) > 0)
 						l.add(new Aresta<T>(key,adjacencia.getV(),adjacencia.getPeso()));
 				}
 			});
 
-
-			//				for(int i = 0; i < nroVertices; i++) {
-			//					aux = vertices[i];
-			//					for (Adjacencia adjacencia : aux) {
-			//						if(adjacencia.getV() > i)
-			//							l.add(new Aresta(i,adjacencia.getV(),adjacencia.getPeso()));
-			//					}
-			//				}
 		}
 		return l;
 	}
@@ -606,7 +555,7 @@ public class Grafo <T extends Comparable<T>>{
 	//Pré-condições: nenhuma.
 	//Pós-condições: nenhuma.
 	public void imprimirGrafo() {
-		this.vertices.forEach((key, value) -> {
+		this.verticesOld.forEach((key, value) -> {
 			System.out.println(key);
 			for (Adjacencia<T> adjacencia : value) {
 				System.out.println(new Aresta<T>(key,adjacencia.getV(),adjacencia.getPeso()));
