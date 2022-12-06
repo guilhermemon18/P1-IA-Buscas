@@ -66,9 +66,11 @@ public class Algoritmos  {
 	}
 
 	//pior solução: Busca em profundidade
-	public void piorSolucaoDFS() {
+	public float piorSolucaoDFS() {
+		long tempoInicial = System.currentTimeMillis();
 		//grafo.imprimirGrafo();
 		List<String> l = grafo.DFS(this.verticeOrigem,this.verticeDestino);//retorna a lista de pontos visitados
+		float tempoFinal = ( (float) (System.currentTimeMillis() - tempoInicial)/1000);
 		System.out.println("Nós do trajeto: ");
 		for (String string : l) {
 			System.out.print("(" + string + ")" + " ");
@@ -81,15 +83,18 @@ public class Algoritmos  {
 		}
 		//desenha o grafo com o percorrimento
 		grafo.desenhaGrafo("piorSolucaoDFS", arestas);
+		return tempoFinal;
 
 	}
 
-	public void melhorSolucaoAEstrela(){
+	public float melhorSolucaoAEstrela(){
+		long tempoInicial = System.currentTimeMillis();
 		Node<String> n = aStar();
+		float tempoFinal = ( (float) (System.currentTimeMillis() - tempoInicial)/1000);
 		List<Aresta<String>> arestas = new LinkedList<Aresta<String>>();
 		//forma as arestas que foram percorridas
 		if(n==null)
-			return;
+			return tempoFinal;
 
 		List<String> ids = new ArrayList<>();
 
@@ -111,6 +116,7 @@ public class Algoritmos  {
 		
 		//desenha o grafo com o percorrimento
 		grafo.desenhaGrafo("AEstrela", arestas);
+		return tempoFinal;
 
 	}
 
@@ -196,14 +202,11 @@ public class Algoritmos  {
 
 			switch(option) {
 			case 1:
-				long tempoInicial = System.currentTimeMillis();
-				algoritmos.piorSolucaoDFS();
-				System.out.println("tempo:"+( (float) (System.currentTimeMillis() - tempoInicial)/1000)+ " segundos");
+				System.out.println("tempo:"+algoritmos.piorSolucaoDFS()+ " segundos");
 				break;
 			case 2:
-				tempoInicial = System.currentTimeMillis();
-				algoritmos.melhorSolucaoAEstrela();
-				System.out.println("tempo:"+( (float) (System.currentTimeMillis() - tempoInicial)/1000)+ " segundos");
+				
+				System.out.println("tempo:"+algoritmos.melhorSolucaoAEstrela()+ " segundos");
 				break;
 			case 3:
 				System.out.println("Digite o nome do arquivo a processar!");
